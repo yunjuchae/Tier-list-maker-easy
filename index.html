@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tier List Maker</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #111318;
+    color: white;
+}
+
+header {
+    padding: 20px;
+    text-align: center;
+    background: #191c24;
+    border-bottom: 1px solid #30343d;
+}
+
+h1 {
+    margin: 0 0 15px;
+    font-size: 28px;
+}
+
+#title {
+    background: #252934;
+    color: white;
+    border: 1px solid #444957;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 18px;
+    text-align: center;
+    width: min(90%, 500px);
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    padding: 15px;
+    background: #191c24;
+}
+
+button {
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    background: #5865f2;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+button:hover {
+    opacity: 0.85;
+}
+
+button.danger {
+    background: #d83c4a;
+}
+
+button.gray {
+    background: #383d49;
+}
+
+#tierList {
+    width: min(1100px, 96%);
+    margin: 20px auto;
+}
+
+.tier {
+    display: flex;
+    min-height: 100px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #22252d;
+    border: 1px solid #353945;
+}
+
+.tier-label {
+    width: 100px;
+    min-width: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 5px;
+}
+
+.tier-name {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: white;
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.tier-settings {
+    position: absolute;
+    bottom: 3px;
+    display: flex;
+    gap: 3px;
+}
+
+.tier-settings button {
+    padding: 3px 6px;
+    font-size: 10px;
+    background: rgba(0,0,0,.35);
+}
+
+.items {
+    flex: 1;
+    min-height: 100px;
+    padding: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 5px;
+}
+
+.item {
+    width: 90px;
+    height: 90px;
+    position: relative;
+    border-radius: 5px;
+    overflow: hidden;
+    background: #30343d;
+    cursor: grab;
+    user-select: none;
+}
+
+.item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.delete-item {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    padding: 2px 6px;
+    background: rgba(0,0,0,.7);
+    border-radius: 5px;
+    font-size: 12px;
+}
+
+#pool {
+    width: min(1100px, 96%);
+    margin: 25px auto;
+    padding: 15px;
+    background: #191c24;
+    border: 2px dashed #444957;
+    border-radius: 10px;
+}
+
+#pool h2 {
+    margin: 0 0 10px;
+    font-size: 18px;
+}
+
+#itemsPool {
+    min-height: 100px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+input[type="file"] {
+    display: none;
+}
+
+.empty {
+    color: #777d89;
+    padding: 25px;
+    width: 100%;
+    text-align: center;
+}
+
+@media (max-width: 600px) {
+    h1 {
+        font-size: 22px;
+    }
+
+    .tier-label {
+        width: 75px;
+        min-width: 75px;
+    }
+
+    .tier-name {
+        font-size: 17px;
+    }
+
+    .item {
+        width: 70px;
+        height: 70px;
+    }
+
+    .tier {
+        min-height: 80px;
+    }
+
+    .items {
+        min-height: 80px;
+    }
+
+    button {
+        padding: 9px 11px;
+        font-size: 13px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>🏆 Tier List Maker</h1>
+    <input id="title" value="My Tier List" maxlength="50">
+</header>
+
+<div class="controls">
+    <button onclick="addTier()">＋ 티어 추가</button>
+
+    <label>
+        <button onclick="document.getElementById('fileInput').click()">
+            🖼️ 사진 추가
+        </button>
+    </label>
+
+    <input
+        id="fileInput"
+        type="file"
+        accept="image/*"
+        multiple
+        onchange="addImages(event)"
+    >
+
+    <button class="gray" onclick="saveData()">💾 저장</button>
+    <button class="gray" onclick="loadData()">📂 불러오기</button>
+    <button class="gray" onclick="downloadImage()">📸 이미지 저장</button>
+    <button class="danger" onclick="resetList()">↻ 초기화</button>
+</div>
+
+<div id="tierList"></div>
+
+<div id="pool">
+    <h2>📦 미배치 사진</h2>
+    <div id="itemsPool" class="items" data-container="pool"></div>
+</div>
+
+<script>
+
+let tiers = [
+    { name: "S", color: "#ff5555", items: [] },
+    { name: "A", color: "#ff884d", items: [] },
+    { name: "B", color: "#ffd447", items: [] },
+    { name: "C", color: "#68d391", items: [] },
+    { name: "D", color: "#63a4ff", items: [] }
+];
+
+let draggedItem = null;
+
+function render() {
+    const list = document.getElementById("tierList");
+    list.innerHTML = "";
+
+    tiers.forEach((tier, tierIndex) => {
+
+        const tierElement = document.createElement("div");
+        tierElement.className = "tier";
+
+        const label = document.createElement("div");
+        label.className = "tier-label";
+        label.style.background = tier.color;
+
+        const nameInput = document.createElement("input");
+        nameInput.className = "tier-name";
+        nameInput.value = tier.name;
+
+        nameInput.onchange = () => {
+            tier.name = nameInput.value;
+        };
+
+        label.appendChild(nameInput);
+
+        const settings = document.createElement("div");
+        settings.className = "tier-settings";
+
+        const colorButton = document.createElement("button");
+        colorButton.textContent = "색";
+        colorButton.onclick = () => changeColor(tierIndex);
+
+        const deleteButton = document.createElement("button");
+        deleteButton.textContent = "삭제";
+        deleteButton.onclick = () => deleteTier(tierIndex);
+
+        settings.appendChild(colorButton);
+        settings.appendChild(deleteButton);
+        label.appendChild(settings);
+
+        const items = document.createElement("div");
+        items.className = "items";
+        items.dataset.tier = tierIndex;
+
+        items.ondragover = e => e.preventDefault();
+
+        items.ondrop = e => {
+            e.preventDefault();
+
+            if (!draggedItem) return;
+
+            moveItem(
+                draggedItem.id,
+                draggedItem.from,
+                tierIndex
+            );
+
+            draggedItem = null;
+            render();
+        };
+
+        tier.items.forEach(item => {
+            items.appendChild(createItemElement(item, tierIndex));
+        });
+
+        if (tier.items.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "empty";
+            empty.textContent = "사진을 여기로 드래그하세요";
+            items.appendChild(empty);
+        }
+
+        tierElement.appendChild(label);
+        tierElement.appendChild(items);
+        list.appendChild(tierElement);
+    });
+
+    renderPool();
+}
+
+function createItemElement(item, tierIndex) {
+
+    const element = document.createElement("div");
+    element.className = "item";
+    element.draggable = true;
+
+    element.dataset.id = item.id;
+
+    const img = document.createElement("img");
+    img.src = item.src;
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "delete-item";
+    deleteButton.textContent = "×";
+
+    deleteButton.onclick = e => {
+        e.stopPropagation();
+        deleteItem(item.id, tierIndex);
+    };
+
+    element.appendChild(img);
+    element.appendChild(deleteButton);
+
+    element.ondragstart = () => {
+        draggedItem = {
+            id: item.id,
+            from: tierIndex
+        };
+    };
+
+    return element;
+}
+
+function renderPool() {
+
+    const pool = document.getElementById("itemsPool");
+    pool.innerHTML = "";
+
+    let poolItems = [];
+
+    tiers.forEach(tier => {
+        tier.items.forEach(item => {
+            if (item.pool) poolItems.push(item);
+        });
+    });
+
+    pool.ondragover = e => e.preventDefault();
+
+    pool.ondrop = e => {
+        e.preventDefault();
+
+        if (!draggedItem) return;
+
+        const item = findItem(draggedItem.id);
+
+        if (item) {
+            item.pool = true;
+            render();
+        }
+
+        draggedItem = null;
+    };
+
+    if (poolItems.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "사진을 추가하면 여기에 나타납니다";
+        pool.appendChild(empty);
+    }
+
+    poolItems.forEach(item => {
+        const element = createItemElement(item, -1);
+        pool.appendChild(element);
+    });
+}
+
+function addImages(event) {
+
+    const files = Array.from(event.target.files);
+
+    files.forEach(file => {
+
+        if (!file.type.startsWith("image/")) return;
+
+        const reader = new FileReader();
+
+        reader.onload = e => {
+
+            const item = {
+                id: Date.now() + Math.random(),
+                src: e.target.result,
+                pool: true
+            };
+
+            tiers[0].items.push(item);
+
+            render();
+        };
+
+        reader.readAsDataURL(file);
+    });
+
+    event.target.value = "";
+}
+
+function findItem(id) {
+
+    for (const tier of tiers) {
+
+        const item = tier.items.find(x => x.id == id);
+
+        if (item) return item;
+    }
+
+    return null;
+}
+
+function moveItem(id, from, to) {
+
+    const item = findItem(id);
+
+    if (!item) return;
+
+    tiers.forEach(tier => {
+        tier.items = tier.items.filter(x => x.id != id);
+    });
+
+    item.pool = false;
+
+    tiers[to].items.push(item);
+}
+
+function deleteItem(id, tierIndex) {
+
+    tiers.forEach(tier => {
+        tier.items = tier.items.filter(item => item.id != id);
+    });
+
+    render();
+}
+
+function addTier() {
+
+    tiers.push({
+        name: "NEW",
+        color: "#777777",
+        items: []
+    });
+
+    render();
+}
+
+function deleteTier(index) {
+
+    if (tiers.length <= 1) {
+        alert("티어는 최소 1개가 필요합니다.");
+        return;
+    }
+
+    if (!confirm("이 티어를 삭제할까요?")) return;
+
+    tiers.splice(index, 1);
+
+    render();
+}
+
+function changeColor(index) {
+
+    const color = prompt(
+        "색상을 입력하세요.\n예: #ff0000",
+        tiers[index].color
+    );
+
+    if (!color) return;
+
+    tiers[index].color = color;
+
+    render();
+}
+
+function saveData() {
+
+    const data = {
+        title: document.getElementById("title").value,
+        tiers: tiers
+    };
+
+    localStorage.setItem(
+        "tierListMaker",
+        JSON.stringify(data)
+    );
+
+    alert("저장되었습니다!");
+}
+
+function loadData() {
+
+    const saved = localStorage.getItem("tierListMaker");
+
+    if (!saved) {
+        alert("저장된 티어리스트가 없습니다.");
+        return;
+    }
+
+    const data = JSON.parse(saved);
+
+    document.getElementById("title").value =
+        data.title || "My Tier List";
+
+    tiers = data.tiers;
+
+    render();
+
+    alert("불러왔습니다!");
+}
+
+function resetList() {
+
+    if (!confirm("정말 초기화할까요?")) return;
+
+    tiers = [
+        { name: "S", color: "#ff5555", items: [] },
+        { name: "A", color: "#ff884d", items: [] },
+        { name: "B", color: "#ffd447", items: [] },
+        { name: "C", color: "#68d391", items: [] },
+        { name: "D", color: "#63a4ff", items: [] }
+    ];
+
+    document.getElementById("title").value = "My Tier List";
+
+    render();
+}
+
+function downloadImage() {
+
+    alert(
+        "현재 버전에서는 먼저 저장 기능을 사용해주세요.\n" +
+        "PNG 이미지 저장 기능은 다음 업데이트에서 추가할 수 있습니다!"
+    );
+}
+
+document.getElementById("title").onchange = saveData;
+
+render();
+
+</script>
+
+</body>
+  </html>
